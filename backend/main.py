@@ -12,10 +12,24 @@ client = Groq(
 
 app = FastAPI()
 
-
 class PromptRequest(BaseModel):
     prompt: str
 
+class UIElement(BaseModel):
+    id: str
+    type: str  
+    x: int
+    y: int  
+    width: int
+    height: int
+    text: str 
+    color: str
+    action: str | None = None
+    fontSize: int
+    fontWeight: str
+
+class Design(BaseModel):
+    elements: list[UIElement]
 
 @app.get("/")
 def home():
@@ -27,13 +41,34 @@ def receive_prompt(request: PromptRequest):
     response = client.chat.completions.create(
         model="openai/gpt-oss-20b",
         messages=[
-            {
-                "role": "user",
-                "content": request.prompt
-            }
-        ]
+    {
+        "role": "system",
+        "content": """
+You are a UI/UX design assistant.
+
+Convert the user's design request into a JSON object.
+
+The JSON must contain these fields:
+type, x, y, width, height, text, color, action, fontSize, fontWeight.
+
+Return ONLY valid JSON.
+Do not explain anything.
+"""
+    },
+    {
+        "role": "user",
+        "content": request.prompt
+    }
+]
+        
     )
 
     return {
         "response": response.choices[0].message.content
+    }
+@app.post("/design")
+def create_design(design: Design):
+    return {
+        "message": "Design received!",
+        "design": design
     }
